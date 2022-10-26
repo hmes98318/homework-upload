@@ -85,14 +85,14 @@ public class Triangle {
 		triangle.output1D(triangle.B);
 		System.out.println("--------------------------");
 
-		System.out.println("Find A[i][j]:");
+		System.out.printf("input A[i][j]:");
 		String input = keyboard.nextLine();
-		String[] input_ary = input.split(",");//Integer.parseInt
+		String[] input_ary = input.split(",");
 		int i = Integer.parseInt(input_ary[0]);
 		int j = Integer.parseInt(input_ary[1]);
 		
 		int result = triangle.get1DVal(triangle.B, i, j);
-		System.out.println(result);
+		System.out.println("A["+i+"]["+j+"]= "+result);
 		
 		/*
 		System.out.println("array A:");
