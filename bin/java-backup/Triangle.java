@@ -2,10 +2,13 @@ package test;
 
 //Homework 2-21.7
 
+import java.util.Scanner;
+
 public class Triangle {
 	int N = 5;
 	int[][] A = new int[N][N];
 	int[] B = new int[N*(N+1)/2];
+	static Scanner keyboard = new Scanner(System.in);
 	
 /************************************************************************/
 	public void CreateDownTriangle() {
@@ -34,21 +37,12 @@ public class Triangle {
 		}
 	}
 /************************************************************************/
-	public void extract_1Dto2D(int[] ary1D, int [][] ary2D) {
-		int k = 0, p = 0, n = N;
+	public int get1DVal(int[] ary1D, int i, int j) {
 
-		for(int i = 0; i < n; i++) {
-			for(int j = 0; j < n; j++) {
-				if(i<j)
-					p = 0;
-				else{
-					k = (i + 1) * (i - 1 + 1) / 2 + j + 1;
-					p = ary1D[k-1];
-				}
-				ary2D[i][j] = p;
-				//System.out.println(k);
-			}
-		}
+		if(i<j) return 0;
+		
+		int k = (i + 1) * (i - 1 + 1) / 2 + j + 1;
+		return ary1D[k-1];
 	}
 /************************************************************************/
 	public void output2D(int[][] array) {
@@ -74,9 +68,6 @@ public class Triangle {
 
 		Triangle triangle = new Triangle();
 
-		int N = triangle.N;
-		int[][] C = new int[N][N];
-
 		
 		triangle.CreateDownTriangle();
 		
@@ -94,12 +85,21 @@ public class Triangle {
 		triangle.output1D(triangle.B);
 		System.out.println("--------------------------");
 
-		System.out.println("extract B to C: ");
-		triangle.extract_1Dto2D(triangle.B, C);
+		System.out.println("Find A[i][j]:");
+		String input = keyboard.nextLine();
+		String[] input_ary = input.split(",");//Integer.parseInt
+		int i = Integer.parseInt(input_ary[0]);
+		int j = Integer.parseInt(input_ary[1]);
+		
+		int result = triangle.get1DVal(triangle.B, i, j);
+		System.out.println(result);
+		
+		/*
 		System.out.println("array A:");
 		triangle.output2D(triangle.A);
 		System.out.println("array C:");
 		triangle.output2D(C);
+		*/
 	}
 /************************************************************************/
 }
