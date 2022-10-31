@@ -2,75 +2,104 @@ package test;
 
 // Homework 3-32.4
 
-import java.util.Scanner;
-import java.util.Arrays;
-import java.util.ArrayList;
+import java.io.*;
+import java.util.*;
 import java.util.Stack;
 
+
 public class ToPostfix {
-	int SIZE = 300;
-    char[] infix = new char[SIZE];
 	static Scanner keyboard = new Scanner(System.in);
-	
-/************************************************************************/
-	public void arrayInit(char[] array) {
-		for(int i = 0; i < array.length; i++) {
-			array[i] = '#';
+
+	Map<Character, Integer> weight = new HashMap<Character, Integer>() {
+		{
+			put('-', 1);
+	        put('+', 1);
+	        put('*', 2);
+	        put('/', 2);
+	        put('%', 2);
+	        put('^', 3);
 		}
-	}
+	};
+
 /************************************************************************/
-	public void infixToPostfix() {
-		int top = 0, index = 0, end_index = 0;
-		char[] stack = new char[SIZE];
+	public int InfixToPostfix(String infix) {
 
-		//System.out.println("infixToPostfix(): "+Arrays.toString(infix));
-		while(infix[end_index] != '#') {
-			end_index++;
-		}
-		//System.out.println("end_index: "+end_index);
+		infix = infix.replaceAll(" ", "");
+		char[] infix_ary = infix.toCharArray();
+		int infix_length = infix.length();
+		
+		Deque<Integer> nums = new ArrayDeque<>();
+		Deque<Character> opers = new ArrayDeque<>();
+		
+		nums.addLast(0);
+		
+		for(int i = 0; i < infix_length; i++) {
 
-		stack[top] = '#';
+			if(infix_ary[i] == '(') 
+				opers.addLast(infix_ary[i]);
 
-		for(index = 0; index <= end_index; index++) {
-			switch(infix[index]) {
-				case '#':
-					while(stack[top] != '#')
-						System.out.printf("%c", stack[top--]);
-					break;
+			else if(infix_ary[i] == ')') {
+				while(!opers.isEmpty()) {
+					if(opers.peekLast() != '(')
+						calculate(nums, opers);
+					else {
+						opers.pollLast();
+						break;
+					}
+				}
+			}
 
-				case ')':
-					while(stack[top] != '(')
-						System.out.printf("%c", stack[top--]);
-					top--;
-					break;
+			else {
+				if(isNumber(infix_ary[i])) {
+					int count = 0, j = i;
 					
-				case '(':
-				case '^':
-				case '*':
-				case '/':
-				case '%':
-				case '+':
-				case '-':
-				    while (weight(stack[top], infix[index]) == true)
-						System.out.printf("%c", stack[top--]);
-				    stack[++top] = infix[index];
-					break;	
+					while(j < infix_length && isNumber(infix_ary[j])) {
+						count = count * 10 + (int)(infix_ary[j++] - '0');
+					}
+					i = j -1;
+					nums.addLast(count);
+				}
+				else {
+					while(!opers.isEmpty() && opers.peekLast() != '(') {
+						char opersLast = opers.peekLast();
 
-				default :
-					System.out.printf("%c", infix[index]);
+						if(weight.get(opersLast) >= weight.get(infix_ary[i]))
+							calculate(nums, opers);
+						else
+							break;
+					}
+					opers.addLast(infix_ary[i]);
+				}
 			}
 		}
+
+		while(!opers.isEmpty() && opers.peekLast() != '(') {
+			calculate(nums, opers);
+		}
+		return nums.peekLast();
 	}
 /************************************************************************/
-	public static boolean weight(char stack_val, char infix_val) {
-		int stack_index = 0, infix_index = 0;
-		char[] stack_priority = {'#','(','-','+','%','/','*','^'};
-		char[] infix_priority = {'#',')','-','+','%','/','*','^','('};
+	public void calculate(Deque<Integer> nums, Deque<Character> opers) {
+		if(nums.isEmpty() || nums.size() < 2) return;
+		if(opers.isEmpty()) return;
 		
-		while(stack_priority[stack_index] != stack_val) stack_index++;
-		while(infix_priority[infix_index] != infix_val) infix_index++;
-
-		return stack_index >= infix_index ? true : false;
+		int b = nums.pollLast(),
+			a = nums.pollLast();
+		char o = opers.pollLast();
+		int ans = 0;
+		
+		if(o == '+') ans = a + b;
+		else if(o == '-') ans = a - b;
+		else if(o == '*') ans = a * b;
+		else if(o == '/') ans = a / b;
+		else if(o == '%') ans = a % b;
+		else if(o == '^') ans = (int)Math.pow(a, b);
+		
+		nums.addLast(ans);
+	}
+/************************************************************************/
+	public boolean isNumber(char c) {
+		return Character.isDigit(c);
 	}
 /************************************************************************/
 	public static boolean validParenthes(ArrayList<Character> parenthes) {
@@ -93,28 +122,21 @@ public class ToPostfix {
 
 
 	public static void main(String[] args) {
-        ToPostfix topos = new ToPostfix();
+		ToPostfix topost = new ToPostfix();
+		
+		//String infix = "10*(9+1*6)";
+		
+		while(true) {
+			System.out.print("\n--------------------------\n");
+			System.out.print("   -- valid operands --\n");
+			System.out.print("  +, -, *, /, %, ^, (, )");
+			System.out.print("\n--------------------------\n");
 
-        while(true) {
-			System.out.print("\n---------------------------\n");
-			System.out.print("      -- 有效運算子 --\n");
-			System.out.print(" ^: 次方\n");
-			System.out.print(" *: 乘\t/: 除\t%: 取餘\n");
-			System.out.print(" +: 加\t\t-: 減\n");
-			System.out.print(" (: 左括號\t): 右括號\n");
-			System.out.print("\n---------------------------\n");
 
-
-			System.out.printf("\n輸入中序運算式: ");
+			System.out.printf("\nEnter infix: ");
 			String input = keyboard.nextLine();
 
 			char[] input_ary = input.toCharArray();
-			if(input_ary.length >= topos.infix.length) {
-				System.out.println("\n公式過長重新輸入");
-				continue;
-			}
-
-
 			ArrayList<Character> parenthes = new ArrayList<Character>();
 			for(int i = 0; i < input_ary.length; i++) {
 				if(input_ary[i] == '(' || input_ary[i] == ')')
@@ -122,21 +144,13 @@ public class ToPostfix {
 			}
 
 			if(!validParenthes(parenthes)) {
-				System.out.println("\n括號無效重新輸入");
+				System.out.println("\nInvalid parentheses, try again");
 				continue;
 			}
 
-			topos.arrayInit(topos.infix);
 
-			for(int i = 0; i < input_ary.length; i++) {
-				topos.infix[i] = input_ary[i];
-			}
-
-			System.out.printf("後序運算式: ");
-			topos.infixToPostfix();
-
-			System.out.println();
+			System.out.println("Ans: "+topost.InfixToPostfix(input));
 		}
-    }
+	}
 /************************************************************************/
 }
