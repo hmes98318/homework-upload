@@ -1,0 +1,314 @@
+/*---------------------------------------------------------------------------------------------------------*/
+/*                                                                                                         */
+/* Copyright (c) Nuvoton Technology Corp. All rights reserved.                                             */
+/*                                                                                                         */
+/*---------------------------------------------------------------------------------------------------------*/
+
+#include <stdio.h>
+#include "NUC1xx.h"
+#include "Driver\DrvSYS.h"
+#include "Driver\DrvGPIO.h"
+#include "LCD_Driver.h"
+#include "Seven_Segment.h"
+void delay_loop(void)
+ {
+ uint32_t i,j;
+	for(i=0;i<3;i++)	
+	{
+		for(j=0;j<60000;j++);
+    }
+ 
+ }
+
+/*----------------------------------------------------------------------------
+  Interrupt subroutine
+  ----------------------------------------------------------------------------*/
+static unsigned char count=0, count1=0;
+static unsigned char loop=12;
+int number = 0;
+int t[] = {
+	1,2,4,8,
+	8,4,2,1,
+	0,15,0,15,
+	1,5,1,5,
+	32,80,45,3,
+	9,0,6,9
+	};
+char temp[16];
+
+void TMR0_IRQHandler(void) // Timer0 interrupt subroutine 
+{ 
+  unsigned char i=0;
+ 	TIMER0->TISR.TIF =1;
+	count++;
+  for(i=0;i<4;i++)    
+  {
+	DrvGPIO_SetBit(E_GPC,12+i);	   
+  if((t[count%sizeof(t)]>>i)&0x01==1)
+	  DrvGPIO_ClrBit(E_GPC,12+i);
+  } 
+	 
+}
+
+void TMR1_IRQHandler(void) // Timer0 interrupt subroutine 
+{
+  unsigned char i=0;
+	TIMER1->TISR.TIF =1;
+	count1++;
+
+	sprintf(temp, "Score: %d       ", count1%100);
+	print_lcd(0, temp);
+}
+
+void Timer0_initial(void)
+{
+	/* Step 1. Enable and Select Timer clock source */          
+	SYSCLK->CLKSEL1.TMR0_S = 0;	//Select 12Mhz for Timer0 clock source 
+  SYSCLK->APBCLK.TMR0_EN =1;	//Enable Timer0 clock source
+
+	/* Step 2. Select Operation mode */	
+	TIMER0->TCSR.MODE=1;		//Select periodic mode for operation mode
+
+	/* Step 3. Select Time out period = (Period of timer clock input) * (8-bit Prescale + 1) * (24-bit TCMP)*/
+	TIMER0->TCSR.PRESCALE=0;	// Set Prescale [0~255]
+	TIMER0->TCMPR  = 1000000;		// Set TICR(TCMP) [0~16777215]
+								// (1/22118400)*(0+1)*(2765)= 125.01usec or 7999.42Hz
+
+	/* Step 4. Enable interrupt */
+	TIMER0->TCSR.IE = 1;
+	TIMER0->TISR.TIF = 1;		//Write 1 to clear for safty		
+	NVIC_EnableIRQ(TMR0_IRQn);	//Enable Timer0 Interrupt
+
+	/* Step 5. Enable Timer module */
+	TIMER0->TCSR.CRST = 1;		//Reset up counter
+	TIMER0->TCSR.CEN = 1;		//Enable Timer0
+
+  TIMER0->TCSR.TDR_EN=1;		// Enable TDR function
+}
+
+void Timer1_initial(void)
+{
+	/* Step 1. Enable and Select Timer clock source */          
+	SYSCLK->CLKSEL1.TMR1_S = 0;	//Select 12Mhz for Timer0 clock source 
+  SYSCLK->APBCLK.TMR1_EN =1;	//Enable Timer0 clock source
+
+	/* Step 2. Select Operation mode */	
+	TIMER1->TCSR.MODE=1;		//Select periodic mode for operation mode
+
+	/* Step 3. Select Time out period = (Period of timer clock input) * (8-bit Prescale + 1) * (24-bit TCMP)*/
+	TIMER1->TCSR.PRESCALE=0;	// Set Prescale [0~255]
+	TIMER1->TCMPR  = 10000000;		// Set TICR(TCMP) [0~16777215]
+								// (1/22118400)*(0+1)*(2765)= 125.01usec or 7999.42Hz
+
+	/* Step 4. Enable interrupt */
+	TIMER1->TCSR.IE = 1;
+	TIMER1->TISR.TIF = 1;		//Write 1 to clear for safty		
+	NVIC_EnableIRQ(TMR1_IRQn);	//Enable Timer0 Interrupt
+
+	/* Step 5. Enable Timer module */
+	TIMER1->TCSR.CRST = 1;		//Reset up counter
+	TIMER1->TCSR.CEN = 1;		//Enable Timer0
+
+  TIMER1->TCSR.TDR_EN=1;		// Enable TDR function
+}
+
+
+int scanKey(){
+	int irow;
+
+	for(irow = 1; irow < 4; irow++){
+		GPIOA->DOUT |= (0x7);
+		GPIOA->DOUT &= ~(1<<(3-irow)); // 011, 101, 110
+		if((GPIOA->PIN & (0x1<<3)) == 0) number = irow;
+		if((GPIOA->PIN & (0x1<<4)) == 0) number = irow + 3;
+		if((GPIOA->PIN & (0x1<<5)) == 0) number = irow + 6;
+	}
+	return number;
+}
+
+void sereenLoop(int lcd_addr, char *str);
+void GPIO_LED(int bit_count, int bit_arr[]);
+
+int main(void)
+{
+	int i=0, j=0, seven_count=0;
+	int bit_count=0; int bit_arr[] = {12,13,14,15,14,13};
+	int SW_INT1=0, SW_INT1_count=0;
+	int scanKey_addr = 0;
+
+	
+	char str1[16] = {'1','1','0','0','3','0','7','9','A',' ',' ',' ',' ',' ',' ',' '};
+	char str2[16] = {'1','0','7','0','3','0','6','6','A',' ',' ',' ',' ',' ',' ',' '};
+	char str3[16] = {'1','1','0','0','3','0','3','6','A',' ',' ',' ',' ',' ',' ',' '};
+	char str4[16] = {'1','1','0','0','3','1','0','2','A',' ',' ',' ',' ',' ',' ',' '};
+	/*
+	sprintf(str1, "11003079A       ");
+	sprintf(str2, "10703066A       ");
+	sprintf(str3, "11003036A       ");
+	sprintf(str4, "11003102A       ");
+	*/
+	
+	
+	/* Unlock the protected registers */	
+	UNLOCKREG();
+  /* Enable the 12MHz oscillator oscillation */
+	DrvSYS_SetOscCtrl(E_SYS_XTL12M, 1);
+ 
+  /* Waiting for 12M Xtal stalble */
+  SysTimerDelay(5000);
+ 
+	/* HCLK clock source. 0: external 12MHz; 4:internal 22MHz RC oscillator */
+	DrvSYS_SelectHCLKSource(0);		
+  /*lock the protected registers */
+	LOCKREG();				
+
+	DrvSYS_SetClockDivider(E_SYS_HCLK_DIV, 0); /* HCLK clock frequency = HCLK clock source / (HCLK_N + 1) */
+
+  for(i=12;i<16;i++)
+	{		
+	DrvGPIO_Open(E_GPC, i, E_IO_OUTPUT);
+  }
+
+	Initial_pannel();  //call initial pannel function
+	clr_all_pannal();
+	//print_lcd(0, str1);  
+	//print_lcd(1, str2);
+	//print_lcd(2, str3); 
+	//print_lcd(3, str4);
+	Timer0_initial();
+	Timer1_initial();
+	
+	
+	close_seven_segment();
+		
+		DrvGPIO_Open(E_GPB, 15, E_IO_INPUT); // SW_INT1
+		DrvGPIO_Open(E_GPB, 11, E_IO_OUTPUT); // Beep
+		
+		GPIOA->PMD.PMD0 = 0x03; // initial scanKey()
+		GPIOA->PMD.PMD1 = 0x03;
+		GPIOA->PMD.PMD2 = 0x03;
+		GPIOA->PMD.PMD3 = 0x03;
+		GPIOA->PMD.PMD4 = 0x03;
+		GPIOA->PMD.PMD5 = 0x03;
+		
+	
+	while(1)
+	{
+		DrvGPIO_SetBit(E_GPB, 11); // Beep
+		
+		
+		//-----------print_lcd-----------
+		//sereenLoop(0, str1);
+		//sereenLoop(1, str2);
+		//sereenLoop(2, str3);
+		//sereenLoop(3, str4);
+		//-------------------------------
+
+
+		
+		
+		
+		
+		
+
+/*
+	//----------GPIO_LED------------
+	if(DrvGPIO_GetBit(E_GPB, 15) == 0){ // check click SW_INT1
+		SW_INT1 = !SW_INT1; // 0 || 1
+		SW_INT1_count++;
+		DrvGPIO_ClrBit(E_GPB,11);
+	}
+
+	if(SW_INT1 == 1){
+		GPIO_LED(bit_count, bit_arr);
+		bit_count++;
+	}
+	//------------------------------
+*/
+	
+	
+	
+
+	
+	
+	
+	if(scanKey_addr == 1) print_lcd(1, str1);
+	if(scanKey_addr == 2) print_lcd(1, str2);
+	if(scanKey_addr == 3) print_lcd(1, str3);
+	if(scanKey_addr == 4) print_lcd(1, str4);
+
+
+		//-------------show_seven_segment-------------
+		for(j=0;j<400;j++){
+			scanKey_addr = scanKey();
+			
+			close_seven_segment();
+			show_seven_segment(0, scanKey_addr);
+			for(i=0; i<800; i++);
+			
+			close_seven_segment();
+			show_seven_segment(1, 0);
+			for(i=0; i<800; i++);
+			/*
+			close_seven_segment();
+			show_seven_segment(2, SW_INT1_count/100);// show SW_INT1_count
+			for(i=0; i<500; i++);
+			
+			close_seven_segment();
+			show_seven_segment(3, SW_INT1_count/1000);
+			for(i=0; i<500; i++);
+		*/
+			}
+
+
+		/*
+		for(j=0;j<500;j++){
+			close_seven_segment();
+			show_seven_segment(0, seven_count%16);
+			for(i=0; i<800; i++);
+			
+			close_seven_segment();
+			show_seven_segment(1, seven_count/16);
+			for(i=0; i<800; i++);
+			
+			close_seven_segment();
+			show_seven_segment(2, seven_count/256);
+			for(i=0; i<800; i++);
+			
+			close_seven_segment();
+			show_seven_segment(3, seven_count/4096);
+			for(i=0; i<800; i++);
+			
+		}
+		seven_count++;
+		*/
+		//-------------------------------------------
+
+	}
+}
+
+
+
+void sereenLoop(int lcd_addr, char *str){
+	int i;
+	char temp = str[15];
+		for(i = 15; i >= 1; i--){
+			str[i] = str[i-1];
+		}
+		str[0] = temp;
+
+		print_lcd(lcd_addr, str);
+}
+/*
+void GPIO_LED(int bit_count, int bit_arr[]){
+	int GPC_index;
+
+	DrvGPIO_SetBit(E_GPC, 12);
+	DrvGPIO_SetBit(E_GPC, 13);
+	DrvGPIO_SetBit(E_GPC, 14);
+	DrvGPIO_SetBit(E_GPC, 15);
+
+	GPC_index = bit_count%6;
+	DrvGPIO_ClrBit(E_GPC, bit_arr[GPC_index]);
+}
+*/
