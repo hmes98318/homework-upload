@@ -1,16 +1,16 @@
-package homework;
+package test;
 
 // Homework 4-45.10
-// 未完成: modify_f()
+// 未完成 modify_f()
 
 import java.util.Scanner;
 import java.util.InputMismatchException;
 
 class Student  {
-	public int id;		// 學號
+	public int id;			// 學號
 	public String name;		// 姓名
 	public String gender;	// 男Male, 女Female
-	public int phone;		// 電話號碼
+	public String phone;		// 電話號碼
 	public String address;	// 地址
 	public Student next;	// next node
 }
@@ -36,7 +36,7 @@ public class List{
 		System.out.print("Student ID : ");			ptr.id = keyboard.nextInt();
 		System.out.print("Student name : ");		ptr.name = keyboard.next();
 		System.out.print("Student gender(M/F): ");	ptr.gender = keyboard.next();
-		System.out.print("Student phone: ");		ptr.phone = keyboard.nextInt();
+		System.out.print("Student phone: ");		ptr.phone = keyboard.next();
 		System.out.print("Student address: ");		ptr.address = keyboard.next();
 		System.out.println("");
 
@@ -83,51 +83,75 @@ public class List{
 /************************************************************************/
 	public void modify_f(){
 	    System.out.println(" Call modify_f().... \n");
-	    String modify_name;
-	    int modify_score;
-	    System.out.printf("Student name: ");
-	    modify_name = keyboard.next();
-	
+
+	    int modify_id;
+	    String modify_phone;
+
+	    System.out.printf("Student ID: ");
+	    modify_id = keyboard.nextInt();
+
 	    prev = head;
 	    current = head.next;
-	    while((current != null) && !(current.name).equals(modify_name)) {
+	    while((current != null) && !(current.id == modify_id)) {
 	        prev = current;
 	        current = current.next;
 	    }
-	
+
 	    if (current != null) {
+
+	        System.out.printf("Original Data: \n");
+	        System.out.printf("****************************************************\n");
+	    	System.out.printf("%-15s %-15s %-15s %-15s %-15s\n", "ID", "NAME", "GENDER", "PHONE", "ADDRESS");
+	    	System.out.printf("%-15d", current.id);
+			System.out.printf("%-17s", current.name);
+			System.out.printf("%-17s", current.gender);
+			System.out.printf("%-15s", current.phone);
+			System.out.printf("%-17s", current.address);
+	        System.out.printf("\n****************************************************\n");
+
+	        
+	        System.out.printf("\n");
 	        System.out.printf("**************************\n");
-	        System.out.printf("Original score: %d\n", current.score);
+	        System.out.print("(1) ID");
+			System.out.print("(2) name");
+			System.out.print("(3) gender(M/F)");
+			System.out.print("(4) phone");
+			System.out.print("(5) address");
+	        System.out.printf("Original phone: %s\n", current.phone);
 	        System.out.printf("**************************\n");
-	        System.out.printf("New Score: ");
-	        modify_score = keyboard.nextInt();
-	        current.score = modify_score;
+	        System.out.printf("Select one to edit: \n");
+	        modify_phone = keyboard.next();
+	        System.out.printf("New phone: ");
+	        modify_phone = keyboard.next();
+	        current.phone = modify_phone;
 	        System.out.printf("Updated!\n\n");
 	    }
 	    else {
-	        System.out.printf("%s is not found\n\n", modify_name);
+	        System.out.printf("%s is not found\n\n", modify_id);
 	        return;
 	    }
 
 	    // 1. 指定 current 節點資料給 newNode
 	    modifyNode = new Student();
-	    modifyNode.name = current.name.substring(0);
-	    modifyNode.score = current.score;
-	
+	    modifyNode.id = current.id;
+	    modifyNode.name = current.name;
+	    modifyNode.gender = current.gender;
+	    modifyNode.phone = current.phone.substring(0);
+	    modifyNode.address = current.address;
+
 	    // 2. 刪除 current 節點
 	    prev.next = current.next;
 	    current = null;
-	    
+
 	    // 3. 再重新排序1
 	    prev = head;
 	    current = head.next;
-	    while ((current != null) && (current.score > modifyNode.score)) {
+	    while ((current != null) && (current.id > modifyNode.id)) {
 	        prev = current;
 	        current = current.next;
 	    }
 	    modifyNode.next = current;
 	    prev.next = modifyNode;
-
 }
 /************************************************************************/
 	public void display_f(){
@@ -140,14 +164,14 @@ public class List{
 		else {
 			System.out.printf("%-15s %-15s %-15s %-15s %-15s\n", "ID", "NAME", "GENDER", "PHONE", "ADDRESS");
 
-			for(int i=1; i<=25; i++) System.out.print("-"); System.out.printf("\n");
+			for(int i=1; i<=50; i++) System.out.print("-"); System.out.printf("\n");
 
 			current = head.next;
 			while (current != null) {
 				System.out.printf("%-15d", current.id);
 				System.out.printf("%-17s", current.name);
 				System.out.printf("%-17s", current.gender);
-				System.out.printf("%-15d", current.phone);
+				System.out.printf("%-15s", current.phone);
 				System.out.printf("%-17s", current.address);
 				System.out.printf("\n");
 
@@ -155,7 +179,7 @@ public class List{
 				count++;
 			}
 
-			for(int i=1; i<=25; i++) System.out.print("-"); System.out.printf("\n");
+			for(int i=1; i<=50; i++) System.out.print("-"); System.out.printf("\n");
 			System.out.printf("Total %d record(s) found\n\n", count);
 		}
 	}
